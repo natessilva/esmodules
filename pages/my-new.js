@@ -1,4 +1,5 @@
 import { navigateTo, resource } from "../app.js";
+import { subEl } from "../observable/index.js";
 
 export const template = `
   <form>
@@ -14,18 +15,13 @@ export class MyNew extends HTMLElement {
     const nameInput = this.querySelector("#name");
     nameInput.focus();
 
-    const submit = (e) => {
+    this.cleanup = subEl(this.querySelector("form"), "submit", (e) => {
       e.preventDefault();
 
       const name = nameInput.value;
       resource.add(name);
       navigateTo(`/list`);
-    };
-    const form = this.querySelector("form");
-    form.addEventListener("submit", submit);
-    this.cleanup = () => {
-      form.removeEventListener("submit", submit);
-    };
+    });
   }
 
   disconnectedCallback() {

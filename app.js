@@ -7,7 +7,7 @@ export const router = new Router({
   "/list/:id": "my-item",
   "/list/:id/edit": "my-item-edit",
   "/new": "my-new",
-  "/bind": "my-bind",
+  "/bind": "my-crud",
 });
 
 export const resource = new Crud();
