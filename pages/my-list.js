@@ -24,7 +24,7 @@ export class MyList extends HTMLElement {
     items.forEach((i) => {
       const instance = document.importNode(itemTemplate.content, true);
       const a = instance.querySelector("a");
-      a.innerText = i.name;
+      a.textContent = i.name;
       a.href = `/list/${i.id}`;
       ul.appendChild(instance);
     });

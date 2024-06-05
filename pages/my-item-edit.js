@@ -18,7 +18,7 @@ export class MyItemEdit extends HTMLElement {
     nameInput.focus();
     nameInput.value = item.name;
 
-    this.querySelector("button").innerText = "Save";
+    this.querySelector("button").textContent = "Save";
 
     const submit = (e) => {
       e.preventDefault();

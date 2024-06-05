@@ -1,16 +1,19 @@
 function noop() {}
 
 /**
- * Creates an `Observable`.
+ * Creates a writable observable.
  *
  * @template T
  * @param {T} value initial value
  * @param {import('./private').StartStop<T>} [start]
- * @returns {import('./private').Observable<T>}
+ * @returns {import('./private').Writable<T>}
  */
-export function observable(value, start = noop) {
+export function writable(value, start = noop) {
   let stop = null;
   const subscribers = new Set();
+
+  const get = () => value;
+
   const set = (v) => {
     if (v === value) {
       return;
@@ -39,15 +42,29 @@ export function observable(value, start = noop) {
     };
   };
 
-  return { set, update, subscribe };
+  return { get, set, update, subscribe };
+}
+
+/**
+ * Creates a readonly observable
+ *
+ * @template T
+ * @param {T} value initial value
+ * @param {import('./private').StartStop<T>} [start]
+ * @returns {import('./private').Readable<T>}
+ */
+export function readable(value, start = noop) {
+  const { get, subscribe } = writable(value, start);
+  return { get, subscribe };
 }
 
 /**
  * Subscribes to many observables
  *
  * @template T
- * @param {import('./private').ManyObservable<T>} [observables]
- * @param {import('./private').ManySubscriber<T>} [fn]
+ * @template Y
+ * @param {import('./private').ManyReadable<T>} observables
+ * @param {import('./private').ManySubscriber<T,Y>} fn
  * @returns {import('./private').Unsubscriber}
  */
 export function subscribeMany(observables, fn) {
@@ -69,33 +86,18 @@ export function subscribeMany(observables, fn) {
 }
 
 /**
- * Creates an Observable computed by subscriptions to many observables
+ * Creates an observable computed via subscriptions to many observables
  *
  * @template T
  * @template Y
- * @param {import('./private').ManyObservable<T>} [observables]
+ * @param {import('./private').ManyReadable<T>} [observables]
  * @param {import('./private').ManySubscriber<T,Y>} [fn]
- * @returns {import('./private').Observable<Y>}
+ * @returns {import('./private').Readable<Y>}
  */
 export function computed(observables, fn) {
-  return {
-    subscribe: observable(null, (set) => {
-      return subscribeMany(observables, (values) => set(fn(values)));
-    }).subscribe,
-  };
-}
-
-/**
- * Gets a value from an Observable
- *
- * @template T
- * @param {import('./private').Observable<T>} [observable]
- * @returns {T}
- */
-export function getValue(observable) {
-  let value;
-  observable.subscribe((v) => (value = v))();
-  return value;
+  return readable(null, (set) => {
+    return subscribeMany(observables, (values) => set(fn(values)));
+  });
 }
 
 /**
@@ -107,7 +109,7 @@ export function getValue(observable) {
  * @param {(this: HTMLElement, ev: HTMLElementEventMap[K]) => any} fn
  * @returns {import('./private').Unsubscriber}
  */
-export function subEl(el, sub, fn) {
+export function subEventListener(el, sub, fn) {
   el.addEventListener(sub, fn);
 
   return () => {

@@ -1,5 +1,5 @@
 import { navigateTo, resource, router } from "../app.js";
-import { subEl } from "../observable/index.js";
+import { subEventListener } from "../observable/index.js";
 
 export const template = `
   <p></p>
@@ -19,14 +19,18 @@ export class MyItem extends HTMLElement {
 
     const id = route.params.id;
     const item = resource.get(id);
-    p.innerText = item.name;
+    p.textContent = item.name;
 
     this.querySelector("#edit").href = `/list/${id}/edit`;
 
-    this.cleanup = subEl(this.querySelector("#delete"), "click", () => {
-      resource.delete(id);
-      navigateTo("/list");
-    });
+    this.cleanup = subEventListener(
+      this.querySelector("#delete"),
+      "click",
+      () => {
+        resource.delete(id);
+        navigateTo("/list");
+      }
+    );
   }
 
   disconnectedCallback() {

@@ -9,17 +9,21 @@ export type StartStop<T> = (
   update: (fn: Updater<T>) => void
 ) => void | (() => void);
 
-export interface Observable<T> {
+export interface Readable<T> {
   subscribe(run: Subscriber<T>): Unsubscriber;
+  get(): T;
+}
 
+export interface Writable<T> extends Readable<T> {
   set(value: T): void;
-
   update(updater: Updater<T>): void;
 }
 
 export type Tuple<T> = { [K in keyof T]: T[K] };
-export type ObservableTuple<T> = { [K in keyof T]: Observable<T[K]> };
-export type ManyObservable<T extends unknown[]> = [...ObservableTuple<T>];
+export type ReadableTuple<T> = { [K in keyof T]: Readable<T[K]> };
+export type ManyReadable<T extends readonly unknown[]> = readonly [
+  ...ReadableTuple<T>
+];
 export type ManySubscriber<T extends readonly unknown[], Y = void> = (
   values: readonly [...Tuple<T>]
 ) => Y;

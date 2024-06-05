@@ -1,12 +1,12 @@
 import {
   computed,
-  getValue,
-  observable,
+  writable,
+  subEventListener,
   subscribeMany,
-  subEl,
 } from "../observable/index.js";
 
-const template = `
+const template = document.createElement("template");
+template.innerHTML = `
 <style>
 * {
     font-family: inherit;
@@ -46,18 +46,19 @@ select {
 class MyCrud extends HTMLElement {
   connectedCallback() {
     const shadowRoot = this.attachShadow({ mode: "open" });
-    shadowRoot.innerHTML = template;
-    const people = observable({
+    shadowRoot.appendChild(template.content.cloneNode(true));
+
+    const people = writable({
       people: [
         { first: "Hans", last: "Emil" },
         { first: "Max", last: "Mustermann" },
         { first: "Roman", last: "Tisch" },
       ],
     });
-    const i = observable(0);
-    const prefix = observable("");
-    const first = observable("");
-    const last = observable("");
+    const i = writable(0);
+    const prefix = writable("");
+    const first = writable("");
+    const last = writable("");
     const filteredPeople = computed([prefix, people], ([prefix, { people }]) =>
       prefix
         ? people.filter((person) => {
@@ -70,7 +71,7 @@ class MyCrud extends HTMLElement {
       filteredPeople[i] ? filteredPeople[i] : null
     );
 
-    let prefixEl = shadowRoot.querySelector("input");
+    let prefixEl = shadowRoot.querySelector("#prefix");
     const firstEl = shadowRoot.querySelector("#first");
     const lastEl = shadowRoot.querySelector("#last");
     const selectEl = shadowRoot.querySelector("select");
@@ -79,48 +80,50 @@ class MyCrud extends HTMLElement {
     const removeEl = shadowRoot.querySelector("#remove");
 
     this.subs = [
-      subEl(prefixEl, "input", () => prefix.set(prefixEl.value)),
-      subEl(firstEl, "input", () => first.set(firstEl.value)),
-      subEl(lastEl, "input", () => last.set(lastEl.value)),
-      subEl(selectEl, "input", () => i.set(selectEl.value)),
-      subEl(createEl, "click", () => {
+      // listen for DOM interaction. Update variables
+      subEventListener(prefixEl, "input", () => prefix.set(prefixEl.value)),
+      subEventListener(firstEl, "input", () => first.set(firstEl.value)),
+      subEventListener(lastEl, "input", () => last.set(lastEl.value)),
+      subEventListener(selectEl, "input", () => i.set(selectEl.value)),
+      subEventListener(createEl, "click", () => {
         people.update(({ people }) => {
-          people.push({ first: getValue(first), last: getValue(last) });
+          people.push({ first: first.get(), last: last.get() });
           return { people };
         });
-        i.set(getValue(people).people.length - 1);
+        i.set(people.get().people.length - 1);
       }),
-      subEl(updateEl, "click", () =>
+      subEventListener(updateEl, "click", () =>
         people.update(({ people }) => {
-          const person = getValue(selected);
-          person.first = getValue(first);
-          person.last = getValue(last);
+          const person = selected.get();
+          person.first = first.get();
+          person.last = last.get();
           return { people };
         })
       ),
-      subEl(removeEl, "click", () => {
+      subEventListener(removeEl, "click", () => {
         people.update(({ people }) => {
-          const index = people.indexOf(getValue(selected));
+          const index = people.indexOf(selected.get());
           people.splice(index, 1);
           return { people };
         });
-        i.update((i) => Math.min(i, getValue(filteredPeople).length - 1));
+        i.update((i) => Math.min(i, filteredPeople.get().length - 1));
+      }),
+      // listen for variable changes. Update DOM
+      selected.subscribe((selected) => {
+        first.set(selected?.first ?? "");
+        last.set(selected?.last ?? "");
       }),
       filteredPeople.subscribe((filteredPeople) => {
         selectEl.innerHTML = "";
         filteredPeople.forEach(({ first, last }, i) => {
           const o = document.createElement("option");
           o.value = i;
-          o.innerText = `${last}, ${first}`;
+          o.textContent = `${last}, ${first}`;
           selectEl.appendChild(o);
         });
-        selectEl.value = getValue(i);
+        selectEl.value = i.get();
       }),
       i.subscribe((i) => (selectEl.value = i)),
-      selected.subscribe((selected) => {
-        first.set(selected?.first ?? "");
-        last.set(selected?.last ?? "");
-      }),
       first.subscribe((first) => (firstEl.value = first)),
       last.subscribe((last) => (lastEl.value = last)),
       subscribeMany(
@@ -137,9 +140,7 @@ class MyCrud extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.subs.forEach((sub) => {
-      return sub();
-    });
+    this.subs.forEach((sub) => sub());
   }
 }
 
